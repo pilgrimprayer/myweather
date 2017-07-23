@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+   <litepal>
+       <dbname value="wea"></dbname>
+     <version value="1"></version>
+      <list>
+          <mapping class="com.example.think.myweather.db.Province"/>
+          <mapping class="com.example.think.myweather.db.City"/>
+          <mapping class="com.example.think.myweather.db.County"/>
+
+      </list>
+    </litepal>
+
