@@ -21,6 +21,7 @@ import android.widget.Toast;
 import com.bumptech.glide.Glide;
 import com.example.think.myweather.gson.Forecast;
 import com.example.think.myweather.gson.Weather;
+import com.example.think.myweather.service.AutoUpdateService;
 import com.example.think.myweather.util.HttpUtil;
 import com.example.think.myweather.util.Utility;
 import java.io.IOException;
@@ -66,17 +67,23 @@ public class WeatherActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         //判断当前的设备版本是否大于21/Android5.0  若设备版本号在Android5.0以上  就执行代码   使得软件界面的头布局和设备系统栏融为一体
         if(Build.VERSION.SDK_INT>21){
+            //为了背景图与状态栏(电池电量 wifi这一栏)融合一起的效果
             View decorView = getWindow().getDecorView();
+           //通过decorView获取到程序显示的区域，包括标题栏，但不包括状态栏
             decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN|View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+           //布局显示在状态栏上面
             getWindow().setStatusBarColor(Color.TRANSPARENT);
+            //状态栏设置为透明色
         }
 
         setContentView(R.layout.activity_weather);
         initView();//初始化各个控件
         swipeRefresh.setColorSchemeResources(R.color.colorPrimary);
+       //下拉刷新进度条的颜色
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);//获取这个文件的xml？？
         //轻量级的存储类，特别适合用于保存软件配置参数用xml文件存放数据
-        String weatherString = prefs.getString("weather",null);//key为weather的
+        String weatherString = prefs.getString("weather",null);
+        //创建 key为weather的 内容空白null
 
         if(weatherString != null){
             //有缓存时直接解析天气数据
@@ -92,7 +99,7 @@ public class WeatherActivity extends AppCompatActivity {
 
 
         swipeRefresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener()
-        //滑动手势时刷新-下拉刷新
+        //下拉刷新监听
         {
             @Override
             public void onRefresh() {
@@ -103,14 +110,16 @@ public class WeatherActivity extends AppCompatActivity {
 
         String bingPic = prefs.getString("bing_pic",null);
         if(bingPic!=null){
+            //if有缓存
             Glide.with(this).load(bingPic).into(bingPicImg);//图片加载
         }else {
+            //没缓存
             loadBingPic();
         }
         navButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //打开滑动菜单
+                //打开滑动菜单-抽屉效果-ChooseAreaFragment 活动开启
                 drawerlayout.openDrawer(GravityCompat.START);
             }
         });
@@ -120,26 +129,37 @@ public class WeatherActivity extends AppCompatActivity {
      * 加载必应图片 每日一图
      */
     private void loadBingPic() {
-        //？？？ 一个图片加载失败 一个图片加载成功 同时？？
+        //用了回调 所以方法里定义方法
         String resquestBingPic = "http://guolin.tech/api/bing_pic";
-        HttpUtil.sendOkHttpRequest(resquestBingPic, new Callback() {
+       //
+        HttpUtil.sendOkHttpRequest(resquestBingPic, new Callback()
+            //访问网址 都会
+        //Callback回调
+        {
             @Override
             public void onFailure(Call call, IOException e) {
-                //图片加载失败
+                //异常情况处理
+                // 图片加载失败
                 e.printStackTrace();
                 Toast.makeText(WeatherActivity.this,"背景图片加载失败",Toast.LENGTH_SHORT).show();
             }
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
+                //服务器返回具体内容
                 //图片加载成功
                 final String bingPic = response.body().string();
+                //获取服务器返回的xml文本
                 SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(WeatherActivity.this).edit();
                 editor.putString("bing_pic",bingPic);
                 editor.apply();
+                //存入数据库
+                //回调接口都还是在子线程中运行
                 runOnUiThread(new Runnable() {
+                //更新UI要切换到主线程
                     @Override
                     public void run() {
+                        //更新UI的代码
                         Glide.with(WeatherActivity.this).load(bingPic).into(bingPicImg);
                         Toast.makeText(WeatherActivity.this,"背景图片加载成功",Toast.LENGTH_SHORT).show();
                     }
@@ -170,8 +190,9 @@ public class WeatherActivity extends AppCompatActivity {
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 final String responseText = response.body().string();
+                //返回文本
                 final Weather weather = Utility.handleWeatherResponse(responseText);
-
+                //解析成对象
                 runOnUiThread(new Runnable() {
                     //从当前进程切换到主线程
                     @Override
@@ -185,8 +206,13 @@ public class WeatherActivity extends AppCompatActivity {
                             showWeatherInfo(weather);
                             //显示-数据显示到相应控件上
                             Toast.makeText(WeatherActivity.this,"获取天气信息成功",Toast.LENGTH_SHORT).show();
+
+
+                            //激活后台自动更新服务
+                            //一旦选中目的地 此服务一直在后台运行
                             Intent intent = new Intent(WeatherActivity.this,AutoUpdateService.class);
                             startService(intent);
+
                         }else {
                             Toast.makeText(WeatherActivity.this,"获取天气信息失败",Toast.LENGTH_SHORT).show();
                         }
@@ -195,7 +221,7 @@ public class WeatherActivity extends AppCompatActivity {
                 });
             }
         });
-        loadBingPic();
+        loadBingPic();//图片加载
     }
 
     /**
@@ -203,11 +229,11 @@ public class WeatherActivity extends AppCompatActivity {
      * @param weather
      */
     private void showWeatherInfo(Weather weather) {
-        String cityName = weather.basic.cityName;
+        String cityName = weather.basic.cityName;//类属性
         String updateTime = weather.basic.update.updateTime.split(" ")[1];
         String degree = weather.now.temperature+"℃";
         String weatherInfo = weather.now.more.info;
-        titleCity.setText(cityName);
+        titleCity.setText(cityName);//控件操作
         titleUpdateTime.setText(updateTime);
         degreeText.setText(degree);
         weatherInfoText.setText(weatherInfo);

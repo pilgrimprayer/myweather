@@ -82,7 +82,7 @@ public class ChooseAreaFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.choose_area,container,false);
-      //重写onCreateView方法 加载布局choose_area
+      //重写onCreateView方法 加载碎片布局choose_area
 
         titleText = (TextView)view.findViewById(R.id.title_text);
         backButton=(Button)view.findViewById(R.id.back_button);
@@ -133,7 +133,7 @@ public class ChooseAreaFragment extends Fragment {
 
                         WeatherActivity activity = (WeatherActivity)getActivity();
                         activity.drawerlayout.closeDrawers();//抽屉效果-侧面出页面 关掉？？
-                        activity.swipeRefresh.setRefreshing(true);//出现下拉刷新？？
+                        activity.swipeRefresh.setRefreshing(true);//出现刷新进度条
                         activity.requestWeather(weatherId);
                     }
                 }
@@ -232,7 +232,7 @@ public class ChooseAreaFragment extends Fragment {
      * @param type
      */
     private void queryFromServer(String address, final String type) {
-        showProgressDialog();
+        showProgressDialog();//进度条
 
         HttpUtil.sendOkHttpRequest(address, new Callback()//
         //向服务器发送请求
